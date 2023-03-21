@@ -102,7 +102,6 @@ function mousePressed() {
 				let contains = animations[i].contains(mouseX, mouseY);
 				if (contains) {
 					sounds.player("squish").start();
-					console.log("hit", mouseX, mouseY);
 					if (animations[i].moving != 0) {
 						animations[i].stop();
 						game.score += 1;
