@@ -28,6 +28,10 @@ class playField {
 		}
 	}
 
+	hasLost() {
+		game.state = GameState.GameOver;
+	}
+
 	clearLines() {
 		for (let row = this.rows - 1; row >= 0; row--) {
 			if (!this.grid[row].includes(this.foreground)) {

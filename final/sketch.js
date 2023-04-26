@@ -1,10 +1,19 @@
-let playfield, fallingPiece, ghostPiece, paused;
-let ghostMode = true;
+let playfield, fallingPiece, paused;
 let port;
 let writer, reader;
 let input = false;
 const width = 10;
-const height = 22;
+const height = 20;
+
+const GameState = {
+	Playing: "Playing",
+	GameOver: "GameOver",
+};
+let game = {
+	score: 0,
+	totalTime: 60,
+	state: GameState.Playing,
+};
 
 function setup() {
 	playfield = new playField(width, height);
@@ -31,33 +40,51 @@ function draw() {
 	if (writer) {
 		writer.write(new Uint8Array([input]));
 	}
+	switch (game.state) {
+		case GameState.Playing:
+			let curr = millis();
+			let delta = curr - prev;
+			prev = curr;
 
-	let curr = millis();
-	let delta = curr - prev;
-	prev = curr;
+			if (!paused) fallingPiece.update(delta);
 
-	if (!paused) fallingPiece.update(delta);
+			if (fallingPiece.timeToFall()) {
+				fallingPiece.resetBuffer();
+				fallingPiece.moveDown();
 
-	if (fallingPiece.timeToFall()) {
-		fallingPiece.resetBuffer();
-		fallingPiece.moveDown();
+				if (!playfield.isValid(fallingPiece)) {
+					fallingPiece.moveUp();
+					spawnNewPiece();
+				}
+			}
 
-		if (!playfield.isValid(fallingPiece)) {
-			fallingPiece.moveUp();
-			spawnNewPiece();
-		}
+			playfield.clearLines();
+
+			background(250);
+
+			playfield.show();
+
+			fallingPiece.show();
+			if (game.totalTime < 0) {
+				playfield.hasLost();
+			}
+			textSize(30);
+			fill(0, 0, 0);
+			text("Time: ", 50, 30);
+			game.totalTime -= deltaTime / 1000;
+			text(ceil(game.totalTime) + " (s)", 150, 30);
+			break;
+
+		case GameState.GameOver:
+			game.maxScore = max(game.score, game.maxScore);
+			background(0);
+			fill(255);
+			textSize(20);
+			textAlign(CENTER);
+			text("Game Over!", 150, 200);
+			text("Score: " + game.score, 150, 250);
+			break;
 	}
-
-	ghostPiece.copy(fallingPiece);
-	hardDrop(ghostPiece, playfield);
-
-	playfield.clearLines();
-
-	background(251);
-
-	playfield.show();
-	if (ghostMode) ghostPiece.show();
-	fallingPiece.show();
 }
 
 function spawnNewPiece() {
@@ -69,11 +96,8 @@ function spawnNewPiece() {
 	const choice = random(pieces);
 	fallingPiece = new Piece(choice, playfield);
 
-	ghostPiece = new Piece(choice, playfield);
-	ghostPiece.isghost = true;
-	ghostPiece.cells = fallingPiece.cells;
-
 	redraw();
+	game.score++;
 }
 
 function hardDrop(piece, playfield) {
@@ -84,10 +108,6 @@ function hardDrop(piece, playfield) {
 	piece.moveUp();
 }
 
-function toggleGhost() {
-	ghostMode = !ghostMode;
-}
-
 async function serialRead() {
 	while (true) {
 		const { value, done } = await reader.read();
@@ -95,28 +115,41 @@ async function serialRead() {
 			reader.releaseLock();
 			break;
 		}
-		console.log(value == 5);
-		console.log(typeof value);
-
-		if (value == 1) {
-			fallingPiece.rotateCCW();
-			if (!playfield.isValid(fallingPiece)) fallingPiece.rotateCW();
-			break;
-		} else if (value == 5) {
-			hardDrop(fallingPiece, playfield);
-			spawnNewPiece();
-			break;
-		} else if (value == 2) {
-			fallingPiece.moveLeft();
-			if (!playfield.isValid(fallingPiece)) fallingPiece.moveRight();
-			break;
-		} else if (value == 3) {
-			fallingPiece.moveRight();
-			if (!playfield.isValid(fallingPiece)) fallingPiece.moveLeft();
-			break;
-		}
 		console.log(value);
+		switch (game.state) {
+			case GameState.Playing:
+				if (value == 1) {
+					fallingPiece.rotateCCW();
+					if (!playfield.isValid(fallingPiece)) fallingPiece.rotateCW();
+					break;
+				} else if (value == 5) {
+					hardDrop(fallingPiece, playfield);
+					spawnNewPiece();
+					break;
+				} else if (value == 2) {
+					fallingPiece.moveLeft();
+					if (!playfield.isValid(fallingPiece)) fallingPiece.moveRight();
+					break;
+				} else if (value == 3) {
+					fallingPiece.moveRight();
+					if (!playfield.isValid(fallingPiece)) fallingPiece.moveLeft();
+					break;
+				}
+
+				break;
+
+			case GameState.GameOver:
+				if (value == 1) {
+					reset();
+				}
+				break;
+		}
 	}
+}
+function reset() {
+	game.totalTime = 60;
+	game.score = 0;
+	game.state = GameState.Playing;
 }
 
 async function connect() {
