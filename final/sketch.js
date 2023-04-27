@@ -4,6 +4,7 @@ let writer, reader;
 let input = false;
 const width = 10;
 const height = 20;
+let osc;
 
 const GameState = {
 	Playing: "Playing",
@@ -30,6 +31,10 @@ function setup() {
 	button.mousePressed(connect);
 	if ("serial" in navigator) {
 	}
+	osc = new p5.Oscillator();
+	osc.setType("triangle");
+	osc.freq(220);
+	osc.amp(0.5);
 }
 
 let prev = 0;
@@ -73,6 +78,8 @@ function draw() {
 			text("Time: ", 50, 30);
 			game.totalTime -= deltaTime / 1000;
 			text(ceil(game.totalTime) + " (s)", 150, 30);
+			osc.start();
+			osc.freq(midiToFreq(int(random(21, 96))));
 			break;
 
 		case GameState.GameOver:

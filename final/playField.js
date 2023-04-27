@@ -29,6 +29,7 @@ class playField {
 	}
 
 	hasLost() {
+		sounds.player("newBlock").start();
 		game.state = GameState.GameOver;
 	}
 
