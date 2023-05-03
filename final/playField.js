@@ -29,7 +29,6 @@ class playField {
 	}
 
 	hasLost() {
-		sounds.player("newBlock").start();
 		game.state = GameState.GameOver;
 	}
 
@@ -39,6 +38,7 @@ class playField {
 				this.grid.splice(row, 1);
 
 				this.grid.unshift(new Array(this.cols).fill(this.foreground));
+				game.score++;
 			}
 		}
 	}

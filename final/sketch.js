@@ -104,7 +104,6 @@ function spawnNewPiece() {
 	fallingPiece = new Piece(choice, playfield);
 
 	redraw();
-	game.score++;
 }
 
 function hardDrop(piece, playfield) {
